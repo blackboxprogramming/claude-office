@@ -127,8 +127,165 @@ function determineState(lastActivityTimestamp) {
   return elapsed < ACTIVE_THRESHOLD_MS ? 'active' : 'idle';
 }
 
+/**
+ * Parse a JSONL file and extract full conversation history
+ * @param {string} filePath - Path to the .jsonl file
+ * @returns {Object|null} Full conversation data or null if parsing fails
+ */
+function parseFullConversation(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.trim().split('\n').filter(line => line.trim());
+
+    if (lines.length === 0) {
+      return null;
+    }
+
+    const messages = [];
+    let startTime = null;
+    let lastTime = null;
+    let toolCallCount = 0;
+    const sessionId = path.basename(filePath, '.jsonl');
+    const projectName = extractProjectName(filePath);
+
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        const timestamp = extractTimestamp(entry);
+
+        if (timestamp && !startTime) {
+          startTime = timestamp;
+        }
+        if (timestamp) {
+          lastTime = timestamp;
+        }
+
+        // Parse user messages
+        if (entry.type === 'user' && entry.message?.content) {
+          const message = {
+            role: 'user',
+            timestamp: timestamp,
+            content: parseContentBlocks(entry.message.content)
+          };
+          messages.push(message);
+        }
+
+        // Parse assistant messages
+        if (entry.type === 'assistant' && entry.message?.content) {
+          const message = {
+            role: 'assistant',
+            timestamp: timestamp,
+            content: parseContentBlocks(entry.message.content)
+          };
+
+          // Count tool uses
+          for (const block of message.content) {
+            if (block.type === 'tool_use') {
+              toolCallCount++;
+            }
+          }
+
+          messages.push(message);
+        }
+
+        // Parse tool results (usually follow tool_use)
+        if (entry.type === 'tool_result') {
+          const message = {
+            role: 'tool_result',
+            timestamp: timestamp,
+            toolUseId: entry.tool_use_id,
+            content: parseToolResultContent(entry.content),
+            isError: entry.is_error || false
+          };
+          messages.push(message);
+        }
+      } catch (e) {
+        // Skip malformed JSON lines
+        continue;
+      }
+    }
+
+    return {
+      id: sessionId,
+      project: projectName,
+      startTime: startTime,
+      lastActivity: lastTime,
+      messageCount: messages.filter(m => m.role === 'user' || m.role === 'assistant').length,
+      toolCallCount: toolCallCount,
+      messages: messages
+    };
+  } catch (error) {
+    console.error(`Error parsing full conversation from ${filePath}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Parse content blocks from a message
+ * @param {string|Array} content - Message content
+ * @returns {Array} Array of content blocks
+ */
+function parseContentBlocks(content) {
+  if (typeof content === 'string') {
+    return [{ type: 'text', text: content }];
+  }
+
+  if (!Array.isArray(content)) {
+    return [{ type: 'text', text: String(content) }];
+  }
+
+  return content.map(block => {
+    if (block.type === 'text') {
+      return { type: 'text', text: block.text || '' };
+    }
+    if (block.type === 'thinking') {
+      return { type: 'thinking', text: block.thinking || '' };
+    }
+    if (block.type === 'tool_use') {
+      return {
+        type: 'tool_use',
+        id: block.id,
+        name: block.name,
+        input: block.input
+      };
+    }
+    if (block.type === 'tool_result') {
+      return {
+        type: 'tool_result',
+        toolUseId: block.tool_use_id,
+        content: block.content,
+        isError: block.is_error || false
+      };
+    }
+    // Unknown block type, return as-is
+    return block;
+  });
+}
+
+/**
+ * Parse tool result content
+ * @param {string|Array} content - Tool result content
+ * @returns {string} Parsed content string
+ */
+function parseToolResultContent(content) {
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map(block => {
+        if (typeof block === 'string') return block;
+        if (block.type === 'text') return block.text || '';
+        return JSON.stringify(block);
+      })
+      .join('\n');
+  }
+  return JSON.stringify(content);
+}
+
 module.exports = {
   parseSessionFile,
+  parseFullConversation,
   extractProjectName,
   determineState,
   ACTIVE_THRESHOLD_MS,

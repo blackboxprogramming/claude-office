@@ -8,6 +8,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
 const { SessionWatcher } = require('./watcher');
+const { parseFullConversation } = require('./parser');
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,6 +18,25 @@ const server = http.createServer(app);
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// API endpoint to get full session conversation
+app.get('/api/session/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+
+  // Find session in watcher
+  const session = watcher.sessions.get(sessionId);
+  if (!session || !session.filePath) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  // Parse full conversation
+  const conversation = parseFullConversation(session.filePath);
+  if (!conversation) {
+    return res.status(500).json({ error: 'Failed to parse session' });
+  }
+
+  res.json(conversation);
+});
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
