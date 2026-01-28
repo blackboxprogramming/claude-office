@@ -1,0 +1,19 @@
+{
+  "name": "claude-office",
+  "version": "1.0.0",
+  "description": "Browser-based ambient monitor visualizing Claude Code sessions as pixel art characters",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node public/js/tests/node-tests.js"
+  },
+  "keywords": ["claude", "visualization", "pixel-art", "threejs"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  }
+}

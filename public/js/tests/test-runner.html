@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Office - Unit Tests</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      background-color: #1a1a2e;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      color: #4ade80;
+      border-bottom: 2px solid #4ade80;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .summary {
+      background-color: #2d2d44;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .summary.pass {
+      border-left: 4px solid #4ade80;
+    }
+
+    .summary.fail {
+      border-left: 4px solid #f87171;
+    }
+
+    .stats {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .passed {
+      color: #4ade80;
+    }
+
+    .failed {
+      color: #f87171;
+    }
+
+    .suite {
+      background-color: #252538;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .suite-name {
+      color: #60a5fa;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .test {
+      padding: 8px 15px;
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+
+    .test.pass {
+      background-color: rgba(74, 222, 128, 0.1);
+      color: #4ade80;
+    }
+
+    .test.fail {
+      background-color: rgba(248, 113, 113, 0.1);
+      color: #f87171;
+    }
+
+    .test-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .test-icon {
+      font-weight: bold;
+    }
+
+    .error-details {
+      background-color: #3d1f1f;
+      padding: 10px;
+      margin-top: 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 50px;
+      font-size: 1.2em;
+      color: #60a5fa;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #60a5fa;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #console-output {
+      background-color: #0d0d14;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 0.9em;
+    }
+
+    #console-output pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .console-line {
+      padding: 2px 0;
+    }
+
+    .console-line.error {
+      color: #f87171;
+    }
+
+    .console-line.suite {
+      color: #60a5fa;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .console-line.pass {
+      color: #4ade80;
+    }
+
+    .console-line.fail {
+      color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <h1>Claude Office - Unit Tests</h1>
+
+  <div id="results">
+    <div class="loading">
+      <span class="spinner"></span>
+      Running tests...
+    </div>
+  </div>
+
+  <div id="console-output">
+    <h3 style="color: #60a5fa; margin-top: 0;">Console Output</h3>
+    <pre id="console-content"></pre>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    // Capture console output
+    const consoleContent = document.getElementById('console-content');
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    function appendLine(text, className = '') {
+      const line = document.createElement('div');
+      line.className = 'console-line ' + className;
+      line.textContent = text;
+      consoleContent.appendChild(line);
+      consoleContent.scrollTop = consoleContent.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      const text = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+
+      let className = '';
+      if (text.startsWith('Suite:')) className = 'suite';
+      else if (text.includes('PASS:')) className = 'pass';
+      else if (text.includes('FAIL:')) className = 'fail';
+
+      appendLine(text, className);
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      const text = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+      appendLine(text, 'error');
+    };
+
+    // Import and run tests
+    import { runTests } from './unit-tests.js';
+
+    async function displayResults() {
+      try {
+        const results = await runTests();
+        const resultsDiv = document.getElementById('results');
+
+        const totalTests = results.passed + results.failed;
+        const allPassed = results.failed === 0;
+
+        let html = `
+          <div class="summary ${allPassed ? 'pass' : 'fail'}">
+            <div class="stats">
+              <span class="passed">${results.passed} passed</span> /
+              <span class="failed">${results.failed} failed</span> /
+              ${totalTests} total
+            </div>
+            <div>Status: ${allPassed ? 'All tests passed!' : 'Some tests failed'}</div>
+          </div>
+        `;
+
+        if (results.errors.length > 0) {
+          html += '<h2 style="color: #f87171;">Failed Tests</h2>';
+          for (const error of results.errors) {
+            html += `
+              <div class="suite">
+                <div class="suite-name">${error.suite}</div>
+                <div class="test fail">
+                  <div class="test-name">
+                    <span class="test-icon">X</span>
+                    <span>${error.test}</span>
+                  </div>
+                  <div class="error-details">${error.error}\n\n${error.stack || ''}</div>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        resultsDiv.innerHTML = html;
+      } catch (e) {
+        console.error('Error running tests:', e);
+        document.getElementById('results').innerHTML = `
+          <div class="summary fail">
+            <div class="stats">Error loading tests</div>
+            <div class="error-details">${e.message}\n\n${e.stack || ''}</div>
+          </div>
+        `;
+      }
+    }
+
+    displayResults();
+  </script>
+</body>
+</html>
