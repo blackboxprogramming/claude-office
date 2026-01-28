@@ -8,6 +8,8 @@ A browser-based ambient monitor that visualizes Claude Code sessions as pixel ar
 
 Claude Office watches your active Claude Code sessions and represents each one as a character in a cozy pixel art office. When you're actively prompting Claude, your character types at their desk. When idle, they fall asleep with floating "zzz" bubbles. When a session ends, they walk out the door.
 
+![Claude Office Screenshot](sample.png)
+
 ## Installation
 
 ### Prerequisites
