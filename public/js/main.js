@@ -8,6 +8,7 @@ import { createOffice, KITCHEN_SPOTS, createSkySystem, getTimeBasedColors } from
 import { Character, CharacterState } from './character.js';
 import { SocketClient } from './socket.js';
 import { ConnectionRenderer } from './connections.js';
+import { SessionModal } from './modal.js';
 
 // Kitchen idle threshold (ms)
 const KITCHEN_IDLE_THRESHOLD = 10000;  // 10 seconds
@@ -34,6 +35,9 @@ const kitchenOccupants = new Map();  // sessionId -> spotIndex
 // Panel hover tracking
 let panelHoveredSessionId = null;
 let highlightRing = null;
+
+// Session modal
+let sessionModal = null;
 
 // Sky system for day/night
 let skySystem;
@@ -96,13 +100,26 @@ function init() {
   highlightRing = createHighlightRing();
   scene.add(highlightRing);
 
+  // Initialize session modal
+  sessionModal = new SessionModal();
+
   // Event listeners
   window.addEventListener('resize', onWindowResize);
-  renderer.domElement.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('click', onCanvasClick);
 
-  // Panel hover events (event delegation)
+  // Panel hover events
   sessionPanel.addEventListener('mouseover', onPanelMouseOver);
   sessionPanel.addEventListener('mouseout', onPanelMouseOut);
+
+  // Panel card click - use mouseup + elementFromPoint to find actual clicked element
+  sessionPanel.addEventListener('mouseup', (e) => {
+    const element = document.elementFromPoint(e.clientX, e.clientY);
+    const card = element?.closest('.avatar-card');
+    if (card && card.dataset.sessionId) {
+      sessionModal.open(card.dataset.sessionId);
+    }
+  });
 
   // Connect to WebSocket
   const socket = new SocketClient(onSessionUpdate, onConnectionChange);
@@ -198,6 +215,15 @@ function onWindowResize() {
  * Handle mouse movement for hover detection
  */
 function onMouseMove(event) {
+  // Skip 3D hover detection when over UI elements
+  if (event.target.closest('#session-panel') || event.target.closest('#session-modal')) {
+    if (hoveredCharacter) {
+      hoveredCharacter = null;
+      updatePanel();
+    }
+    return;
+  }
+
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -216,6 +242,36 @@ function onMouseMove(event) {
   if (foundCharacter !== hoveredCharacter) {
     hoveredCharacter = foundCharacter;
     updatePanel();
+  }
+
+  // Update cursor style
+  document.body.style.cursor = foundCharacter ? 'pointer' : 'default';
+}
+
+/**
+ * Handle click to open session modal (for 3D characters)
+ */
+function onCanvasClick(event) {
+  // Ignore clicks on UI elements
+  if (event.target.closest('#session-panel') || event.target.closest('#session-modal')) {
+    return;
+  }
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Raycast to find clicked character
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+
+  for (const intersect of intersects) {
+    if (intersect.object.userData?.type === 'character') {
+      const character = intersect.object.userData.character;
+      if (character.sessionInfo?.id) {
+        sessionModal.open(character.sessionInfo.id);
+      }
+      break;
+    }
   }
 }
 
