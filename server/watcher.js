@@ -8,6 +8,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { parseSessionFile, SESSION_MAX_AGE_MS } = require('./parser');
+const { detectCliches } = require('./cliche-detector');
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 const HOOK_EVENTS_FILE = path.join(os.homedir(), '.claude-office', 'events.jsonl');
@@ -26,6 +27,9 @@ class SessionWatcher {
     // Relationship tracking
     this.sessionRelationships = new Map();  // child_id -> parent_id
     this.sessionChildren = new Map();       // parent_id -> Set<child_id>
+
+    // Cliche detection tracking
+    this.lastClicheMap = new Map();         // session_id -> last detected phrase
   }
 
   /**
@@ -260,6 +264,23 @@ class SessionWatcher {
         return;
       }
 
+      // Run cliche detection on latest assistant text
+      if (session.latestAssistantText) {
+        const clicheResult = detectCliches(session.latestAssistantText);
+        if (clicheResult) {
+          const lastPhrase = this.lastClicheMap.get(session.id);
+          if (lastPhrase !== clicheResult.phrase) {
+            this.lastClicheMap.set(session.id, clicheResult.phrase);
+            session.clicheEvent = {
+              severity: clicheResult.severity,
+              phrase: clicheResult.phrase,
+              matchCount: clicheResult.allMatches.length,
+              timestamp: Date.now()
+            };
+          }
+        }
+      }
+
       session.filePath = filePath;
       this.sessions.set(session.id, session);
       this.broadcastUpdate();
@@ -331,7 +352,7 @@ class SessionWatcher {
       const children = this.sessionChildren.get(s.id);
       const parentId = this.sessionRelationships.get(s.id);
 
-      return {
+      const sessionData = {
         id: s.id,
         project: s.project,
         state: s.state,
@@ -339,8 +360,16 @@ class SessionWatcher {
         taskDescription: s.taskDescription || null,
         activeAgents: activeTasks ? activeTasks.size : 0,
         parentSessionId: parentId || null,
-        childSessionIds: children ? Array.from(children) : []
+        childSessionIds: children ? Array.from(children) : [],
+        clicheEvent: s.clicheEvent || null
       };
+
+      // Clear cliche event after including in broadcast (one-shot delivery)
+      if (s.clicheEvent) {
+        delete s.clicheEvent;
+      }
+
+      return sessionData;
     });
 
     this.onUpdate({

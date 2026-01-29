@@ -9,6 +9,8 @@ import { Character, CharacterState } from './character.js';
 import { SocketClient } from './socket.js';
 import { ConnectionRenderer } from './connections.js';
 import { SessionModal } from './modal.js';
+import { AmbientPlayer } from './audio.js';
+import { DrinkingGame } from './drinking-game.js';
 
 // Kitchen idle threshold (ms)
 const KITCHEN_IDLE_THRESHOLD = 10000;  // 10 seconds
@@ -38,6 +40,16 @@ let highlightRing = null;
 
 // Session modal
 let sessionModal = null;
+
+// Drinking game
+let drinkingGame = null;
+
+// Audio
+let ambientPlayer = null;
+let wallSpeakerMesh = null;
+let wallSpeakerTexture = null;
+let wallSpeakerPlayingTexture = null;
+let volumePopup = null;
 
 // Sky system for day/night
 let skySystem;
@@ -102,6 +114,39 @@ function init() {
 
   // Initialize session modal
   sessionModal = new SessionModal();
+
+  // Initialize drinking game
+  drinkingGame = new DrinkingGame();
+
+  // Initialize ambient music player and wire up wall speaker
+  ambientPlayer = new AmbientPlayer();
+  wallSpeakerMesh = office.wallSpeaker.mesh;
+  wallSpeakerTexture = office.wallSpeaker.texture;
+  wallSpeakerPlayingTexture = office.wallSpeaker.playingTexture;
+  volumePopup = document.getElementById('volume-popup');
+  const volumeSlider = document.getElementById('volume-slider');
+
+  // Sync slider to persisted volume
+  if (volumeSlider) {
+    volumeSlider.value = Math.round(ambientPlayer.getVolume() * 100);
+    volumeSlider.addEventListener('input', (e) => {
+      ambientPlayer.setVolume(parseInt(e.target.value, 10) / 100);
+    });
+  }
+
+  // Close volume popup when clicking outside
+  document.addEventListener('click', (e) => {
+    if (volumePopup && !e.target.closest('#volume-popup')) {
+      // Check if this click is on the wall speaker (handled separately)
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(wallSpeakerMesh);
+      if (intersects.length === 0) {
+        volumePopup.classList.remove('visible');
+      }
+    }
+  });
 
   // Event listeners
   window.addEventListener('resize', onWindowResize);
@@ -216,7 +261,7 @@ function onWindowResize() {
  */
 function onMouseMove(event) {
   // Skip 3D hover detection when over UI elements
-  if (event.target.closest('#session-panel') || event.target.closest('#session-modal')) {
+  if (event.target.closest('#session-panel') || event.target.closest('#session-modal') || event.target.closest('#volume-popup')) {
     if (hoveredCharacter) {
       hoveredCharacter = null;
       updatePanel();
@@ -253,25 +298,57 @@ function onMouseMove(event) {
  */
 function onCanvasClick(event) {
   // Ignore clicks on UI elements
-  if (event.target.closest('#session-panel') || event.target.closest('#session-modal')) {
+  if (event.target.closest('#session-panel') || event.target.closest('#session-modal') || event.target.closest('#volume-popup')) {
     return;
   }
 
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-  // Raycast to find clicked character
+  // Raycast to find clicked objects
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(scene.children, true);
 
   for (const intersect of intersects) {
-    if (intersect.object.userData?.type === 'character') {
+    const objType = intersect.object.userData?.type;
+
+    // Handle wall speaker click - toggle audio and show volume popup
+    if (objType === 'wallSpeaker' && ambientPlayer && wallSpeakerMesh) {
+      const playing = ambientPlayer.toggle();
+      updateSpeakerTexture(playing);
+      showVolumePopup(event.clientX, event.clientY);
+      return;
+    }
+
+    // Handle character click - open session modal
+    if (objType === 'character') {
       const character = intersect.object.userData.character;
       if (character.sessionInfo?.id) {
         sessionModal.open(character.sessionInfo.id);
       }
-      break;
+      return;
     }
+  }
+}
+
+/**
+ * Update the wall speaker texture based on playing state
+ */
+function updateSpeakerTexture(playing) {
+  if (wallSpeakerMesh) {
+    wallSpeakerMesh.material.map = playing ? wallSpeakerPlayingTexture : wallSpeakerTexture;
+    wallSpeakerMesh.material.needsUpdate = true;
+  }
+}
+
+/**
+ * Show the volume popup near the click position
+ */
+function showVolumePopup(clientX, clientY) {
+  if (volumePopup) {
+    volumePopup.style.left = `${clientX + 10}px`;
+    volumePopup.style.top = `${clientY - 20}px`;
+    volumePopup.classList.add('visible');
   }
 }
 
@@ -422,6 +499,13 @@ function onSessionUpdate(newSessions) {
           }
         }
       }
+    }
+  }
+
+  // Handle cliche events (drinking game)
+  for (const session of sessions) {
+    if (session.clicheEvent && drinkingGame) {
+      drinkingGame.handleClicheEvent(session.id, session.clicheEvent, characters);
     }
   }
 

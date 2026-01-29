@@ -28,8 +28,9 @@ function parseSessionFile(filePath) {
     let sessionId = path.basename(filePath, '.jsonl');
     let projectName = extractProjectName(filePath);
     let taskDescription = null;
+    let latestAssistantText = null;
 
-    // Parse each line to find the most recent activity and latest user message
+    // Parse each line to find the most recent activity and latest user/assistant messages
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
@@ -53,6 +54,20 @@ function parseSessionFile(filePath) {
             }
           }
         }
+
+        // Extract latest assistant message text for cliche detection
+        if (entry.type === 'assistant' && entry.message?.content) {
+          let content = entry.message.content;
+          if (Array.isArray(content)) {
+            const textParts = content
+              .filter(p => p.type === 'text')
+              .map(p => p.text || '');
+            content = textParts.join(' ');
+          }
+          if (typeof content === 'string' && content.trim()) {
+            latestAssistantText = content.trim();
+          }
+        }
       } catch (e) {
         // Skip malformed JSON lines
         continue;
@@ -72,7 +87,8 @@ function parseSessionFile(filePath) {
       project: projectName,
       state: state,
       lastActivity: lastActivity,
-      taskDescription: taskDescription
+      taskDescription: taskDescription,
+      latestAssistantText: latestAssistantText
     };
   } catch (error) {
     console.error(`Error parsing session file ${filePath}:`, error.message);

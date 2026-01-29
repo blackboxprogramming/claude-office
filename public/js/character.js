@@ -23,7 +23,10 @@ export const CharacterState = {
   SLEEPING: 'sleeping',
   WALKING: 'walking',
   EXITING: 'exiting',
-  SOCIALIZING: 'socializing'
+  SOCIALIZING: 'socializing',
+  DRINKING_DESK: 'drinking_desk',
+  DRINKING_TOAST: 'drinking_toast',
+  DRINKING_KITCHEN: 'drinking_kitchen'
 };
 
 // Skin tone palettes (base, shadow, highlight, deep shadow)
@@ -618,6 +621,12 @@ function createCharacterFrame(profileIndex, frame, state) {
     drawSleepingCharacter(ctx, profile, frame);
   } else if (state === CharacterState.SOCIALIZING) {
     drawSocializingCharacter(ctx, profile, frame);
+  } else if (state === CharacterState.DRINKING_DESK) {
+    drawDrinkingDeskCharacter(ctx, profile, frame);
+  } else if (state === CharacterState.DRINKING_TOAST) {
+    drawDrinkingToastCharacter(ctx, profile, frame);
+  } else if (state === CharacterState.DRINKING_KITCHEN) {
+    drawDrinkingKitchenCharacter(ctx, profile, frame);
   } else {
     drawStandingCharacter(ctx, profile, frame, state);
   }
@@ -1002,6 +1011,549 @@ function drawSocializingCharacter(ctx, profile, frame) {
 
   // Draw accessories last
   drawAccessory(ctx, profile, headY, frame, CharacterState.SOCIALIZING);
+}
+
+/**
+ * Draw character taking a shot at desk (mild cliche)
+ * 4 frames: reach under desk, pull bottle up, tilt head back + drink, set down
+ */
+function drawDrinkingDeskCharacter(ctx, profile, frame) {
+  const skinColors = SKIN_TONES[profile.skinTone];
+  const clothingStyle = CLOTHING_STYLES[profile.clothing];
+  const drinkFrame = frame % 4;
+  const headY = 6;
+  const bodyY = 48;
+
+  // Draw hair behind
+  if (['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY, frame, CharacterState.WORKING);
+  }
+
+  // Head with tilt on frame 2
+  const headTilt = drinkFrame === 2 ? -4 : 0;
+  ctx.fillStyle = skinColors.deep;
+  ctx.fillRect(26, headY + headTilt, 44, 40);
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(28, headY + 2 + headTilt, 40, 36);
+  ctx.fillStyle = skinColors.highlight;
+  ctx.fillRect(32, headY + 4 + headTilt, 18, 14);
+  ctx.fillStyle = skinColors.shadow;
+  ctx.fillRect(28, headY + 34 + headTilt, 40, 4);
+
+  // Hair on top
+  if (!['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY + headTilt, frame, CharacterState.WORKING);
+  }
+
+  // Eyes - squinting on frame 2 (drinking)
+  if (drinkFrame === 2) {
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(34, headY + 20 + headTilt, 10, 3);
+    ctx.fillRect(54, headY + 20 + headTilt, 10, 3);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(32, headY + 16 + headTilt, 12, 10);
+    ctx.fillRect(52, headY + 16 + headTilt, 12, 10);
+    ctx.fillStyle = '#1a202c';
+    ctx.fillRect(38, headY + 20 + headTilt, 4, 4);
+    ctx.fillRect(58, headY + 20 + headTilt, 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(38, headY + 19 + headTilt, 2, 2);
+    ctx.fillRect(58, headY + 19 + headTilt, 2, 2);
+  }
+
+  // Mouth
+  if (drinkFrame === 2) {
+    // Open mouth drinking
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(42, headY + 32 + headTilt, 12, 6);
+  } else {
+    ctx.fillStyle = '#c53030';
+    ctx.fillRect(40, headY + 34 + headTilt, 16, 4);
+  }
+
+  // Ears
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(22, headY + 20 + headTilt, 8, 12);
+  ctx.fillRect(66, headY + 20 + headTilt, 8, 12);
+
+  // Body
+  drawClothing(ctx, profile, bodyY, frame, CharacterState.WORKING);
+
+  // Arms with bottle animation
+  ctx.fillStyle = skinColors.base;
+  if (drinkFrame === 0) {
+    // Reaching under desk
+    ctx.fillRect(10, bodyY + 20, 16, 24);
+    ctx.fillRect(70, bodyY + 8, 16, 14);
+    ctx.fillRect(74, bodyY + 18, 14, 14);
+  } else if (drinkFrame === 1) {
+    // Pulling bottle up
+    ctx.fillRect(10, bodyY + 4, 16, 24);
+    ctx.fillRect(70, bodyY + 8, 16, 14);
+    // Bottle in left hand
+    ctx.fillStyle = '#8b5e3c';
+    ctx.fillRect(4, bodyY - 4, 10, 20);
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(6, bodyY - 2, 6, 16);
+    // Bottle cap
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(6, bodyY - 6, 6, 4);
+  } else if (drinkFrame === 2) {
+    // Tilting bottle to drink
+    ctx.fillRect(10, bodyY - 4, 16, 24);
+    ctx.fillRect(70, bodyY + 8, 16, 14);
+    // Bottle tilted near mouth
+    ctx.fillStyle = '#8b5e3c';
+    ctx.fillRect(16, bodyY - 16, 10, 20);
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(18, bodyY - 14, 6, 16);
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(18, bodyY - 18, 6, 4);
+  } else {
+    // Setting down
+    ctx.fillRect(10, bodyY + 12, 16, 20);
+    ctx.fillRect(70, bodyY + 8, 16, 14);
+    // Bottle going down
+    ctx.fillStyle = '#8b5e3c';
+    ctx.fillRect(4, bodyY + 6, 10, 20);
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(6, bodyY + 8, 6, 16);
+  }
+
+  // Legs
+  ctx.fillStyle = '#3d4852';
+  ctx.fillRect(30, 92, 16, 30);
+  ctx.fillRect(50, 92, 16, 30);
+  ctx.fillStyle = '#1a202c';
+  ctx.fillRect(26, 118, 24, 10);
+  ctx.fillRect(46, 118, 24, 10);
+
+  drawAccessory(ctx, profile, headY + headTilt, frame, CharacterState.WORKING);
+}
+
+/**
+ * Draw character doing a toast in place (medium cliche)
+ * 4 frames: raise glass, hold high ("cheers"), drink, slam down
+ */
+function drawDrinkingToastCharacter(ctx, profile, frame) {
+  const skinColors = SKIN_TONES[profile.skinTone];
+  const clothingStyle = CLOTHING_STYLES[profile.clothing];
+  const toastFrame = frame % 4;
+  const headY = 6;
+  const bodyY = 48;
+
+  // Draw hair behind
+  if (['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY, frame, CharacterState.SOCIALIZING);
+  }
+
+  // Head
+  ctx.fillStyle = skinColors.deep;
+  ctx.fillRect(26, headY, 44, 40);
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(28, headY + 2, 40, 36);
+  ctx.fillStyle = skinColors.highlight;
+  ctx.fillRect(32, headY + 4, 18, 14);
+  ctx.fillStyle = skinColors.shadow;
+  ctx.fillRect(28, headY + 34, 40, 4);
+
+  // Hair on top
+  if (!['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY, frame, CharacterState.SOCIALIZING);
+  }
+
+  // Happy eyes
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(32, headY + 16, 12, 10);
+  ctx.fillRect(52, headY + 16, 12, 10);
+  ctx.fillStyle = '#1a202c';
+  ctx.fillRect(38, headY + 20, 4, 4);
+  ctx.fillRect(58, headY + 20, 4, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(38, headY + 19, 2, 2);
+  ctx.fillRect(58, headY + 19, 2, 2);
+
+  // Happy mouth
+  ctx.fillStyle = '#c53030';
+  ctx.fillRect(38, headY + 34, 20, 4);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(42, headY + 34, 12, 2);
+
+  // Ears
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(22, headY + 20, 8, 12);
+  ctx.fillRect(66, headY + 20, 8, 12);
+
+  // Body
+  drawClothing(ctx, profile, bodyY, frame, CharacterState.SOCIALIZING);
+
+  // Arms with glass animation
+  ctx.fillStyle = skinColors.base;
+  const glassColor = '#b8860b';
+  const glassHighlight = '#ffd700';
+
+  if (toastFrame === 0) {
+    // Raising glass - right arm going up
+    ctx.fillRect(72, bodyY - 4, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    // Glass in right hand
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(78, bodyY - 12, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(80, bodyY - 10, 6, 8);
+  } else if (toastFrame === 1) {
+    // Glass held high - cheers!
+    ctx.fillRect(72, bodyY - 14, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    // Glass above head
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(78, bodyY - 24, 10, 14);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(80, bodyY - 22, 6, 10);
+  } else if (toastFrame === 2) {
+    // Drinking - arm bent to face
+    ctx.fillRect(60, bodyY - 8, 14, 24);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    // Glass near mouth
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(56, bodyY - 12, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(58, bodyY - 10, 6, 8);
+  } else {
+    // Slam down
+    ctx.fillRect(72, bodyY + 8, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    // Glass at waist
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(80, bodyY + 32, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(82, bodyY + 34, 6, 8);
+  }
+
+  // Legs
+  ctx.fillStyle = '#3d4852';
+  ctx.fillRect(30, 92, 16, 30);
+  ctx.fillRect(50, 92, 16, 30);
+  ctx.fillStyle = '#1a202c';
+  ctx.fillRect(26, 118, 24, 10);
+  ctx.fillRect(46, 118, 24, 10);
+
+  drawAccessory(ctx, profile, headY, frame, CharacterState.SOCIALIZING);
+}
+
+/**
+ * Draw character at kitchen group toast (severe cliche)
+ * 6 frames: raise glass, hold, clink, drink, set down, cheer
+ */
+function drawDrinkingKitchenCharacter(ctx, profile, frame) {
+  const skinColors = SKIN_TONES[profile.skinTone];
+  const kitchenFrame = frame % 6;
+  const headY = 6;
+  const bodyY = 48;
+
+  // Draw hair behind
+  if (['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY, frame, CharacterState.SOCIALIZING);
+  }
+
+  // Head with cheer bounce on frame 5
+  const cheerBounce = kitchenFrame === 5 ? -4 : 0;
+  ctx.fillStyle = skinColors.deep;
+  ctx.fillRect(26, headY + cheerBounce, 44, 40);
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(28, headY + 2 + cheerBounce, 40, 36);
+  ctx.fillStyle = skinColors.highlight;
+  ctx.fillRect(32, headY + 4 + cheerBounce, 18, 14);
+  ctx.fillStyle = skinColors.shadow;
+  ctx.fillRect(28, headY + 34 + cheerBounce, 40, 4);
+
+  if (!['long', 'ponytail', 'bob'].includes(profile.hairStyle)) {
+    drawHair(ctx, profile, headY + cheerBounce, frame, CharacterState.SOCIALIZING);
+  }
+
+  // Eyes
+  if (kitchenFrame === 3) {
+    // Squinting while drinking
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(34, headY + 20 + cheerBounce, 10, 3);
+    ctx.fillRect(54, headY + 20 + cheerBounce, 10, 3);
+  } else if (kitchenFrame === 5) {
+    // Excited eyes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(31, headY + 15 + cheerBounce, 14, 12);
+    ctx.fillRect(51, headY + 15 + cheerBounce, 14, 12);
+    ctx.fillStyle = '#1a202c';
+    ctx.fillRect(37, headY + 19 + cheerBounce, 5, 5);
+    ctx.fillRect(57, headY + 19 + cheerBounce, 5, 5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(38, headY + 18 + cheerBounce, 2, 2);
+    ctx.fillRect(58, headY + 18 + cheerBounce, 2, 2);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(32, headY + 16 + cheerBounce, 12, 10);
+    ctx.fillRect(52, headY + 16 + cheerBounce, 12, 10);
+    ctx.fillStyle = '#1a202c';
+    ctx.fillRect(38, headY + 20 + cheerBounce, 4, 4);
+    ctx.fillRect(58, headY + 20 + cheerBounce, 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(38, headY + 19 + cheerBounce, 2, 2);
+    ctx.fillRect(58, headY + 19 + cheerBounce, 2, 2);
+  }
+
+  // Mouth
+  if (kitchenFrame === 3) {
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(42, headY + 32 + cheerBounce, 12, 6);
+  } else if (kitchenFrame === 5) {
+    // Big smile
+    ctx.fillStyle = '#c53030';
+    ctx.fillRect(36, headY + 33 + cheerBounce, 24, 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(40, headY + 33 + cheerBounce, 16, 3);
+  } else {
+    ctx.fillStyle = '#c53030';
+    ctx.fillRect(38, headY + 34 + cheerBounce, 20, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(42, headY + 34 + cheerBounce, 12, 2);
+  }
+
+  // Ears
+  ctx.fillStyle = skinColors.base;
+  ctx.fillRect(22, headY + 20 + cheerBounce, 8, 12);
+  ctx.fillRect(66, headY + 20 + cheerBounce, 8, 12);
+
+  // Body
+  drawClothing(ctx, profile, bodyY, frame, CharacterState.SOCIALIZING);
+
+  // Arms with glass
+  ctx.fillStyle = skinColors.base;
+  const glassColor = '#b8860b';
+  const glassHighlight = '#ffd700';
+
+  if (kitchenFrame === 0) {
+    // Raise glass
+    ctx.fillRect(72, bodyY - 4, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(78, bodyY - 12, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(80, bodyY - 10, 6, 8);
+  } else if (kitchenFrame === 1) {
+    // Hold high
+    ctx.fillRect(72, bodyY - 14, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(78, bodyY - 24, 10, 14);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(80, bodyY - 22, 6, 10);
+  } else if (kitchenFrame === 2) {
+    // Clink - glass extended forward
+    ctx.fillRect(72, bodyY - 10, 14, 24);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(84, bodyY - 16, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(86, bodyY - 14, 6, 8);
+  } else if (kitchenFrame === 3) {
+    // Drink
+    ctx.fillRect(60, bodyY - 8, 14, 24);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(56, bodyY - 12, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(58, bodyY - 10, 6, 8);
+  } else if (kitchenFrame === 4) {
+    // Set down
+    ctx.fillRect(72, bodyY + 8, 14, 28);
+    ctx.fillRect(10, bodyY + 4, 14, 32);
+    ctx.fillStyle = glassColor;
+    ctx.fillRect(80, bodyY + 32, 10, 12);
+    ctx.fillStyle = glassHighlight;
+    ctx.fillRect(82, bodyY + 34, 6, 8);
+  } else {
+    // Cheer - both arms up
+    ctx.fillRect(8, bodyY - 14, 14, 28);
+    ctx.fillRect(74, bodyY - 14, 14, 28);
+    ctx.fillStyle = skinColors.highlight;
+    ctx.fillRect(10, bodyY - 12, 6, 10);
+    ctx.fillRect(76, bodyY - 12, 6, 10);
+  }
+
+  // Legs
+  ctx.fillStyle = '#3d4852';
+  ctx.fillRect(30, 92, 16, 30);
+  ctx.fillRect(50, 92, 16, 30);
+  ctx.fillStyle = '#1a202c';
+  ctx.fillRect(26, 118, 24, 10);
+  ctx.fillRect(46, 118, 24, 10);
+
+  drawAccessory(ctx, profile, headY + cheerBounce, frame, CharacterState.SOCIALIZING);
+}
+
+/**
+ * Create a shot glass sparkle texture
+ */
+function createShotGlassTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+
+  // Golden sparkle
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(6, 2, 4, 12);
+  ctx.fillRect(2, 6, 12, 4);
+  // Bright center
+  ctx.fillStyle = '#fff8dc';
+  ctx.fillRect(7, 6, 2, 4);
+  ctx.fillRect(6, 7, 4, 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  return texture;
+}
+
+/**
+ * Create a clink star/sparkle texture
+ */
+function createClinkTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 20;
+  canvas.height = 20;
+  const ctx = canvas.getContext('2d');
+
+  // Star shape
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(8, 0, 4, 20);
+  ctx.fillRect(0, 8, 20, 4);
+  // Diagonals
+  ctx.fillRect(2, 2, 4, 4);
+  ctx.fillRect(14, 2, 4, 4);
+  ctx.fillRect(2, 14, 4, 4);
+  ctx.fillRect(14, 14, 4, 4);
+  // Bright center
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(8, 8, 4, 4);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  return texture;
+}
+
+/**
+ * Shot glass sparkle particle (for desk drinking)
+ */
+class ShotGlassParticle {
+  constructor(startPosition) {
+    const texture = createShotGlassTexture();
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 1
+    });
+
+    this.sprite = new THREE.Sprite(material);
+    this.sprite.scale.set(0.2, 0.2, 1);
+    this.sprite.renderOrder = 12;
+
+    this.sprite.position.set(
+      startPosition.x + (Math.random() - 0.5) * 0.4,
+      startPosition.y + 0.6 + Math.random() * 0.3,
+      startPosition.z + (Math.random() - 0.5) * 0.3
+    );
+
+    this.velocity = {
+      x: (Math.random() - 0.5) * 0.6,
+      y: 1.2 + Math.random() * 0.6,
+      z: 0
+    };
+
+    this.age = 0;
+    this.maxAge = 0.8 + Math.random() * 0.2;
+    this.startScale = 0.15 + Math.random() * 0.1;
+  }
+
+  update(deltaTime) {
+    this.age += deltaTime;
+    this.sprite.position.x += this.velocity.x * deltaTime;
+    this.sprite.position.y += this.velocity.y * deltaTime;
+    this.velocity.y -= 2.0 * deltaTime;
+
+    const lifeRatio = this.age / this.maxAge;
+    const scale = this.startScale * (1 - lifeRatio);
+    this.sprite.scale.set(scale, scale, 1);
+    this.sprite.material.opacity = 1 - lifeRatio;
+
+    return this.age < this.maxAge;
+  }
+
+  dispose() {
+    this.sprite.material.map.dispose();
+    this.sprite.material.dispose();
+  }
+}
+
+/**
+ * Clink sparkle particle (for kitchen group toast)
+ */
+class ClinkParticle {
+  constructor(startPosition) {
+    const texture = createClinkTexture();
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 1
+    });
+
+    this.sprite = new THREE.Sprite(material);
+    this.sprite.scale.set(0.3, 0.3, 1);
+    this.sprite.renderOrder = 12;
+
+    this.sprite.position.set(
+      startPosition.x + (Math.random() - 0.5) * 0.6,
+      startPosition.y + 0.8 + Math.random() * 0.4,
+      startPosition.z + (Math.random() - 0.5) * 0.4
+    );
+
+    this.velocity = {
+      x: (Math.random() - 0.5) * 1.2,
+      y: 1.0 + Math.random() * 0.8,
+      z: (Math.random() - 0.5) * 0.4
+    };
+
+    this.age = 0;
+    this.maxAge = 1.2 + Math.random() * 0.3;
+    this.startScale = 0.2 + Math.random() * 0.15;
+    this.rotationSpeed = (Math.random() - 0.5) * 4;
+  }
+
+  update(deltaTime) {
+    this.age += deltaTime;
+    this.sprite.position.x += this.velocity.x * deltaTime;
+    this.sprite.position.y += this.velocity.y * deltaTime;
+    this.sprite.position.z += this.velocity.z * deltaTime;
+    this.velocity.y -= 1.5 * deltaTime;
+
+    const lifeRatio = this.age / this.maxAge;
+    let scale;
+    if (lifeRatio < 0.2) {
+      scale = this.startScale * (lifeRatio / 0.2);
+    } else {
+      scale = this.startScale * (1 - (lifeRatio - 0.2) / 0.8);
+    }
+    this.sprite.scale.set(scale, scale, 1);
+    this.sprite.material.opacity = lifeRatio > 0.6 ? (1 - (lifeRatio - 0.6) / 0.4) : 1;
+
+    return this.age < this.maxAge;
+  }
+
+  dispose() {
+    this.sprite.material.map.dispose();
+    this.sprite.material.dispose();
+  }
 }
 
 /**
@@ -1404,6 +1956,14 @@ export class Character {
     this.isAtKitchen = false;
     this.kitchenSpot = null;
 
+    // Drinking animation tracking
+    this.drinkingParticles = [];
+    this.drinkingParticleTimer = 0;
+    this.drinkingTimer = 0;
+    this.drinkingDuration = 0;
+    this.previousState = null;
+    this.onDrinkingComplete = null;
+
     // Create character sprite
     this.sprite = this.createSprite();
 
@@ -1497,6 +2057,27 @@ export class Character {
       this.clearSweatParticles();
       this.clearZParticles();
       this.monitorSprite.visible = false;
+    } else if (newState === CharacterState.DRINKING_DESK) {
+      this.previousState = this.state !== newState ? this.state : CharacterState.WORKING;
+      this.targetPosition = null;
+      this.drinkingTimer = 0;
+      this.drinkingDuration = 0.8;
+      this.clearZParticles();
+      this.monitorSprite.visible = false;
+    } else if (newState === CharacterState.DRINKING_TOAST) {
+      this.previousState = this.state !== newState ? this.state : CharacterState.WORKING;
+      this.targetPosition = null;
+      this.drinkingTimer = 0;
+      this.drinkingDuration = 0.8;
+      this.clearZParticles();
+      this.monitorSprite.visible = false;
+    } else if (newState === CharacterState.DRINKING_KITCHEN) {
+      this.previousState = this.state !== newState ? this.state : CharacterState.WORKING;
+      this.targetPosition = null;
+      this.drinkingTimer = 0;
+      this.drinkingDuration = 1.5;
+      this.clearZParticles();
+      this.monitorSprite.visible = false;
     } else if (newState === CharacterState.EXITING) {
       // Walk toward the door on the right wall
       this.targetPosition = new THREE.Vector3(DOOR_POSITION.x, 0.8, DOOR_POSITION.z);
@@ -1574,11 +2155,18 @@ export class Character {
       this.updateChatBubbleParticles(deltaTime);
     }
 
+    // Handle drinking animations
+    if (this.state === CharacterState.DRINKING_DESK ||
+      this.state === CharacterState.DRINKING_TOAST ||
+      this.state === CharacterState.DRINKING_KITCHEN) {
+      this.updateDrinkingAnimation(deltaTime);
+    }
+
     // Handle movement
     if (this.targetPosition &&
-        (this.state === CharacterState.EXITING ||
-         this.state === CharacterState.WALKING ||
-         this.state === CharacterState.WORKING)) {
+      (this.state === CharacterState.EXITING ||
+        this.state === CharacterState.WALKING ||
+        this.state === CharacterState.WORKING)) {
 
       const pos = this.sprite.position;
       const target = this.targetPosition;
@@ -1691,6 +2279,53 @@ export class Character {
     this.chatBubbleParticles = [];
   }
 
+  updateDrinkingAnimation(deltaTime) {
+    this.drinkingTimer += deltaTime;
+
+    // Spawn drinking particles
+    this.drinkingParticleTimer += deltaTime * 1000;
+    const spawnInterval = this.state === CharacterState.DRINKING_KITCHEN ? 200 : 300;
+    if (this.drinkingParticleTimer >= spawnInterval) {
+      this.drinkingParticleTimer = 0;
+      const ParticleClass = this.state === CharacterState.DRINKING_KITCHEN
+        ? ClinkParticle : ShotGlassParticle;
+      const particle = new ParticleClass(this.sprite.position);
+      this.drinkingParticles.push(particle);
+      this.scene.add(particle.sprite);
+    }
+
+    // Update particles
+    this.drinkingParticles = this.drinkingParticles.filter(particle => {
+      const alive = particle.update(deltaTime);
+      if (!alive) {
+        this.scene.remove(particle.sprite);
+        particle.dispose();
+      }
+      return alive;
+    });
+
+    // Auto-return to previous state when drinking animation completes
+    if (this.drinkingTimer >= this.drinkingDuration) {
+      const callback = this.onDrinkingComplete;
+      this.onDrinkingComplete = null;
+      // Restore previous state
+      const restoreState = this.previousState || CharacterState.WORKING;
+      this.previousState = null;
+      this.state = restoreState;
+      this.frame = 0;
+      this.updateTexture();
+      if (callback) callback();
+    }
+  }
+
+  clearDrinkingParticles() {
+    for (const particle of this.drinkingParticles) {
+      this.scene.remove(particle.sprite);
+      particle.dispose();
+    }
+    this.drinkingParticles = [];
+  }
+
   getTooltipInfo() {
     const elapsed = Date.now() - this.sessionInfo.lastActivity;
     const minutes = Math.floor(elapsed / 60000);
@@ -1714,6 +2349,7 @@ export class Character {
   dispose() {
     this.clearZParticles();
     this.clearSweatParticles();
+    this.clearDrinkingParticles();
 
     // Dispose character sprite
     if (this.sprite.material.map) {
@@ -1734,5 +2370,21 @@ export class Character {
       this.namePlateSprite.material.map.dispose();
     }
     this.namePlateSprite.material.dispose();
+  }
+
+  /**
+   * Trigger drinking animation
+   * @param {string} drinkState - CharacterState.DRINKING_DESK, DRINKING_TOAST, or DRINKING_KITCHEN
+   */
+  triggerDrinking(drinkState) {
+    // Don't interrupt if already drinking or exiting
+    if (this.state === CharacterState.EXITING ||
+      this.state === CharacterState.DRINKING_DESK ||
+      this.state === CharacterState.DRINKING_TOAST ||
+      this.state === CharacterState.DRINKING_KITCHEN) {
+      return;
+    }
+
+    this.setState(drinkState);
   }
 }

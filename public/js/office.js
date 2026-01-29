@@ -456,15 +456,15 @@ function createDeskTopTexture() {
 
     // Monitor base
     ctx.fillStyle = '#2a2a3a';
-    ctx.fillRect(w/2 - 8, 4, 16, 10);
+    ctx.fillRect(w / 2 - 8, 4, 16, 10);
 
     // Keyboard
     ctx.fillStyle = '#3a3a4a';
-    ctx.fillRect(w/2 - 12, 20, 24, 10);
+    ctx.fillRect(w / 2 - 12, 20, 24, 10);
     ctx.fillStyle = '#4a4a5a';
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 6; j++) {
-        ctx.fillRect(w/2 - 10 + j * 4, 22 + i * 3, 3, 2);
+        ctx.fillRect(w / 2 - 10 + j * 4, 22 + i * 3, 3, 2);
       }
     }
 
@@ -511,7 +511,7 @@ function createDeskFrontTexture() {
 
     // Drawer handle
     ctx.fillStyle = '#a67c00';
-    ctx.fillRect(w/2 - 6, h/2 - 1, 12, 3);
+    ctx.fillRect(w / 2 - 6, h / 2 - 1, 12, 3);
   });
 }
 
@@ -565,7 +565,7 @@ function createDeskMonitorTexture() {
 
     // Stand
     ctx.fillStyle = '#3a3a4a';
-    ctx.fillRect(w/2 - 4, h - 4, 8, 4);
+    ctx.fillRect(w / 2 - 4, h - 4, 8, 4);
   });
 }
 
@@ -639,9 +639,9 @@ function createCoffeeMachineTexture() {
 
     // Coffee spout
     ctx.fillStyle = '#6a6a7a';
-    ctx.fillRect(w/2 - 4, 42, 8, 8);
+    ctx.fillRect(w / 2 - 4, 42, 8, 8);
     ctx.fillStyle = '#4a4a5a';
-    ctx.fillRect(w/2 - 2, 48, 4, 4);
+    ctx.fillRect(w / 2 - 2, 48, 4, 4);
 
     // Status lights
     ctx.fillStyle = '#4ade80';  // Green - ready
@@ -1391,6 +1391,165 @@ function createRefrigerator(scene) {
 }
 
 /**
+ * Create wall speaker texture (pixel art boombox)
+ */
+function createWallSpeakerTexture(isPlaying) {
+  return createCanvasTexture(48, 40, (ctx, w, h) => {
+    // Body
+    ctx.fillStyle = '#2a2a3a';
+    ctx.fillRect(2, 4, w - 4, h - 6);
+
+    // Body highlight (top edge)
+    ctx.fillStyle = '#3a3a4a';
+    ctx.fillRect(2, 4, w - 4, 3);
+
+    // Left speaker cone
+    ctx.fillStyle = '#1a1a2a';
+    ctx.beginPath();
+    ctx.arc(14, 22, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a3a4a';
+    ctx.beginPath();
+    ctx.arc(14, 22, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2a2a3a';
+    ctx.beginPath();
+    ctx.arc(14, 22, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right speaker cone
+    ctx.fillStyle = '#1a1a2a';
+    ctx.beginPath();
+    ctx.arc(34, 22, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3a3a4a';
+    ctx.beginPath();
+    ctx.arc(34, 22, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2a2a3a';
+    ctx.beginPath();
+    ctx.arc(34, 22, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Center display
+    ctx.fillStyle = '#1a1a2a';
+    ctx.fillRect(18, 14, 12, 8);
+
+    if (isPlaying) {
+      // Music notes on display when playing - two eighth notes connected
+      ctx.fillStyle = '#4ade80';
+      // Left note: head (oval) + stem
+      ctx.beginPath();
+      ctx.ellipse(21, 20, 2, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(22, 14, 1, 6);  // stem
+      // Right note: head (oval) + stem  
+      ctx.beginPath();
+      ctx.ellipse(27, 19, 2, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(28, 14, 1, 5);  // stem
+      // Beam connecting the two notes
+      ctx.fillRect(22, 14, 7, 2);
+
+      // LED indicator - green
+      ctx.fillStyle = '#4ade80';
+    } else {
+      // Dashes on display when paused
+      ctx.fillStyle = '#4a5568';
+      ctx.fillRect(20, 18, 3, 1);
+      ctx.fillRect(25, 18, 3, 1);
+
+      // LED indicator - dim red
+      ctx.fillStyle = '#6b2020';
+    }
+    ctx.fillRect(23, 8, 3, 3);
+
+    // Bottom shadow
+    ctx.fillStyle = '#1a1a2a';
+    ctx.fillRect(4, h - 4, w - 8, 2);
+  });
+}
+
+/**
+ * Create wall speaker side texture (for depth)
+ */
+function createWallSpeakerSideTexture() {
+  return createCanvasTexture(16, 40, (ctx, w, h) => {
+    // Side body - slightly darker than front
+    ctx.fillStyle = '#222230';
+    ctx.fillRect(0, 4, w, h - 6);
+
+    // Top edge highlight
+    ctx.fillStyle = '#2a2a3a';
+    ctx.fillRect(0, 4, w, 3);
+
+    // Bottom shadow
+    ctx.fillStyle = '#1a1a2a';
+    ctx.fillRect(0, h - 4, w, 2);
+
+    // Vent/grill lines
+    ctx.fillStyle = '#1a1a2a';
+    for (let i = 10; i < h - 10; i += 4) {
+      ctx.fillRect(2, i, w - 4, 1);
+    }
+  });
+}
+
+/**
+ * Create wall-mounted speaker on the back wall (2.5D with depth)
+ */
+function createWallSpeaker(scene) {
+  const speakerX = 5.75;  // Between right window (x=4) and refrigerator (x=7.5)
+  const speakerY = 1.8;   // Same height as windows
+  const speakerZ = -OFFICE_HEIGHT * TILE_SIZE / 2 + 0.03; // On back wall
+  const depth = 0.25;     // How far the speaker sticks out from wall
+
+  const texture = createWallSpeakerTexture(false);
+  const playingTexture = createWallSpeakerTexture(true);
+  const sideTexture = createWallSpeakerSideTexture();
+
+  // Front face
+  const frontMaterial = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+  const frontGeometry = new THREE.PlaneGeometry(1.0, 0.85);
+  const frontMesh = new THREE.Mesh(frontGeometry, frontMaterial);
+  frontMesh.position.set(speakerX, speakerY, speakerZ + depth);
+  frontMesh.userData = { type: 'wallSpeaker' };
+  frontMesh.renderOrder = 2;
+  scene.add(frontMesh);
+
+  // Side face (right side, visible from isometric view)
+  const sideMaterial = new THREE.MeshBasicMaterial({
+    map: sideTexture,
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+  const sideGeometry = new THREE.PlaneGeometry(depth, 0.85);
+  const sideMesh = new THREE.Mesh(sideGeometry, sideMaterial);
+  sideMesh.rotation.y = Math.PI / 2;
+  sideMesh.position.set(speakerX + 0.5, speakerY, speakerZ + depth / 2);
+  sideMesh.renderOrder = 2;
+  scene.add(sideMesh);
+
+  // Top face (small visible top)
+  const topMaterial = new THREE.MeshBasicMaterial({
+    color: '#2a2a3a',
+    side: THREE.DoubleSide
+  });
+  const topGeometry = new THREE.PlaneGeometry(1.0, depth);
+  const topMesh = new THREE.Mesh(topGeometry, topMaterial);
+  topMesh.rotation.x = -Math.PI / 2;
+  topMesh.position.set(speakerX, speakerY + 0.425, speakerZ + depth / 2);
+  topMesh.renderOrder = 2;
+  scene.add(topMesh);
+
+  return { mesh: frontMesh, texture, playingTexture };
+}
+
+/**
  * Create the complete office environment
  */
 export function createOffice(scene) {
@@ -1403,6 +1562,9 @@ export function createOffice(scene) {
   // Create kitchen area
   const kitchenTable = createKitchenTable(scene);
   const refrigerator = createRefrigerator(scene);
+
+  // Create wall speaker
+  const wallSpeaker = createWallSpeaker(scene);
 
   // Create and initialize DeskManager for dynamic desk creation
   const deskManager = new DeskManager(scene);
@@ -1419,6 +1581,7 @@ export function createOffice(scene) {
     plants,
     kitchenTable,
     refrigerator,
+    wallSpeaker,
     OFFICE_WIDTH,
     OFFICE_HEIGHT
   };
